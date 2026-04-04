@@ -201,11 +201,7 @@ html(lang='en')
                             button.btn.btn-success.btn-icon-text(type='button' style='margin-left: 5%;')
                               i.mdi.mdi-plus-circle.btn-icon-append
                               span   Qo&apos;shish
-                        if deletes==true && deletesAll==true 
-                          a#delete(href='#' title='/certifcate/all/delete/')
-                            button#btn-delete.btn.btn-danger.btn-icon-text.disabled(type='button')
-                              i.mdi.mdi-close
-                              span  O&apos;chirish
+
                     .table-responsive
                       table.table
                         thead
@@ -275,14 +271,13 @@ html(lang='en')
                                     a(href='/certifcate/update/'+docs[x].id)
                                       button.btn.btn-outline-light(type='button' title='tahrirlash')
                                         i.mdi.mdi-lead-pencil
-                                  if deletes && docs[x].status &&  activeDocumentDelete
-                                      a(href='/certifcate/delete/'+docs[x].id)
-                                        button.btn.btn-outline-danger(type='button')
-                                          i.mdi.mdi-close
+                                  if deletes && docs[x].status && activeDocumentDelete
+                                    button.btn.btn-outline-danger(type='button' title="o'chirish" onclick='openDeleteModal("'+docs[x].id+'")')
+                                      i.mdi.mdi-close
                                   else if deletes && !docs[x].status
-                                    a(href='/certifcate/delete/'+docs[x].id)
-                                      button.btn.btn-outline-danger(type='button')
-                                        i.mdi.mdi-close
+                                    button.btn.btn-outline-danger(type='button' title="o'chirish" onclick='openDeleteModal("'+docs[x].id+'")')
+                                      i.mdi.mdi-close
+
                         tfoot 
                           tr 
                             td(colspan=4)  
@@ -310,6 +305,62 @@ html(lang='en')
                                       i.mdi.mdi-arrow-right-bold
                             td(colspan=4)  #{filter_count} ta element mavjut
           // content-wrapper ends
+
+          // Delete confirmation modal
+          #deleteModal(style='display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:99999; align-items:center; justify-content:center;')
+            .card(style='background:#fff; border-radius:12px; padding:30px 35px; max-width:500px; width:90%; box-shadow:0 8px 32px rgba(0,0,0,0.3); text-align:center;')
+              .card-body
+                div(style='font-size:48px; color:#e74c3c; margin-bottom:15px;')
+                  i.mdi.mdi-alert-outline
+                h4(style='color:#333; margin-bottom:10px; font-weight:600;') ⚠️ Hujjatni o'chirish
+                p(style='color:#555; font-size:14px; line-height:1.7; margin-bottom:15px;')
+                  | Bu amalni qaytarib bo'lmaydi! Hujjat va unga bog'liq barcha ma'lumotlar butunlay o'chiriladi.
+                  br
+                  strong(style='color:#e74c3c;') O'chirilgan ma'lumotlarni tiklash imkonsiz!
+                p(style='color:#333; font-size:14px; margin-bottom:5px;')
+                  | Hujjatni o'chirish uchun uning ID raqamini kiriting:
+                p#deleteModalDocId(style='font-size:20px; font-weight:700; color:#e74c3c; margin-bottom:10px;')
+                input#deleteConfirmInput.form-control(type='text' placeholder='Hujjat ID raqamini kiriting...' style='text-align:center; margin-bottom:15px; font-size:16px; border:2px solid #ddd; border-radius:8px; padding:10px;')
+                div(style='display:flex; gap:10px;')
+                  button#deleteCancelBtn.btn.btn-secondary(style='flex:1; padding:10px; font-size:14px; border-radius:8px;' onclick='closeDeleteModal()') Bekor qilish
+                  button#deleteConfirmBtn.btn.btn-danger(disabled='' style='flex:1; padding:10px; font-size:14px; border-radius:8px; opacity:0.5; cursor:not-allowed;')
+                    i.mdi.mdi-delete(style='margin-right:5px;')
+                    | O'chirish
+
+          script.
+            var currentDeleteId = '';
+            function openDeleteModal(id) {
+              currentDeleteId = String(id);
+              var modal = document.getElementById('deleteModal');
+              modal.style.display = 'flex';
+              document.getElementById('deleteModalDocId').textContent = currentDeleteId;
+              document.getElementById('deleteConfirmInput').value = '';
+              var btn = document.getElementById('deleteConfirmBtn');
+              btn.disabled = true;
+              btn.style.opacity = '0.5';
+              btn.style.cursor = 'not-allowed';
+            }
+            function closeDeleteModal() {
+              document.getElementById('deleteModal').style.display = 'none';
+              currentDeleteId = '';
+            }
+            document.getElementById('deleteConfirmInput').addEventListener('input', function() {
+              var btn = document.getElementById('deleteConfirmBtn');
+              if (this.value.trim() === currentDeleteId) {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.style.cursor = 'pointer';
+              } else {
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+                btn.style.cursor = 'not-allowed';
+              }
+            });
+            document.getElementById('deleteConfirmBtn').addEventListener('click', function() {
+              if (currentDeleteId) {
+                window.location.href = '/certifcate/delete/' + currentDeleteId;
+              }
+            });
           // partial:partials/_footer.html
           footer.footer
           // partial

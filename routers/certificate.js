@@ -1074,20 +1074,6 @@ router.get('/all/delete/:id', auth, async (req, res) => {
 });
 
 
-router.delete('/delete/:id', auth, async (req, res) => {
-  let id = parseInt(req.params.id);
-  if (!id) {
-    return res.status(400).json({ error: 'id xato berildi, id butun son qiymat bo\'lishi shart' });
-  }
-  let certificate = await (await db).certificate.getCertificate(id);
-  if (!certificate) {
-    return res.status(404).json({ error: 'ushbu idga mos certificate to\'pilmadi!' });
-  }
-  let result = await (await db).certificate.delete(id);
-  res.json(
-    certificate
-  );
-});
 
 
 
