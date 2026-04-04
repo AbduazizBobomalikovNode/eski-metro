@@ -817,6 +817,7 @@ router.post('/update/:id', auth, async (req, res) => {
   certificate = {
     data: body,
     link: result_pdf.link,
+    real: true,
   }
   certificate.url = result_pdf.url;
   let add = fiil_up(body);

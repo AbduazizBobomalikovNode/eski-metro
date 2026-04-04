@@ -223,11 +223,12 @@ html(lang='en')
                             th  Tashkilot 
                             th  Yaratilgan  vaqti 
                             th  Xodim 
+                            th  Ma'lumot manbai
                             th  Status 
                             th  Ammallar 
                         tbody
                           - for (var x = 0; x < docs.length; x++)
-                            tr
+                            tr(style=(docs[x].real === false ? 'background-color: rgba(255,152,0,0.15);' : ''))
                               td
                                 .form-check.form-check-muted.m-0
                                   label.form-check-label
@@ -241,6 +242,14 @@ html(lang='en')
                               td  #{docs[x].organization?docs[x].organization.length>25?docs[x].organization.slice(0,25):docs[x].organization:""} 
                               td  #{docs[x].date}
                               td  #{docs[x].employee}
+                              if docs[x].restore_date
+                                td(style='color: #e67e22; font-weight: 500;')
+                                  i.mdi.mdi-restore(style='margin-right:3px;')
+                                  | qayta tiklangan #{docs[x].restore_date}
+                              else
+                                td(style='color: #27ae60;')
+                                  i.mdi.mdi-check-circle(style='margin-right:3px;')
+                                  | tizimni o'zida yaratilgan
                               if !activeDocumentUpdate
                                 td  #{docs[x].status?"Tasdiqlangan":"Tasdiqlanmagan"}
                               else 
