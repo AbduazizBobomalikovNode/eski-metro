@@ -8,13 +8,43 @@ const util = require('util');
 const exec = util.promisify(require('child_process').exec);
 
 
+const os = require('os');
+
 async function createPDF(doc, pdf) {
+    const inputPath = path.resolve(__dirname, "../../views/certifcate/" + doc); 
+    const outputPath = path.resolve(__dirname, "../../views/certifcate/" + pdf);
+    
+    console.log("Kiritish yo‘li:", inputPath);
+    console.log("Chiqish yo‘li:", outputPath);
+    
+
+    if (!fs.existsSync(inputPath)) {
+        console.log("Fayl topilmadi:", inputPath);
+        return false;
+    }
     try {
-        const { stdout, stderr } = await exec(`unoconv -f pdf "${path.resolve(__dirname, "../../views/certifcate/" + doc)}"`);
-        console.log('ishladi :', stdout);
+        let command;
+
+        // OSni aniqlash
+        if (os.platform() === 'win32') {
+            // Windows uchun docx2pdf
+            command = `docx2pdf --keep-active "${inputPath}" "${outputPath}"`;
+        } else {
+            // Linux/macOS uchun unoconv bilan LibreOffice server rejimida ishlatish
+            command = `libreoffice --headless --invisible --convert-to pdf "${inputPath}" --outdir "${path.dirname(outputPath)}"`;
+        }
+        console.log(command);
+        const { stdout, stderr } = await exec(command);
+
+        if (stderr) {
+            console.log("Xatolik (stderr):", stderr);
+            return false;
+        }
+
+        console.log("Konvertatsiya bajarildi:", stdout);
         return true;
     } catch (error) {
-        console.log("xatolik :", error);
+        console.log("Xatolik:", error);
         return false;
     }
 }

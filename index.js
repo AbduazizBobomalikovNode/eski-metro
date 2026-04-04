@@ -45,6 +45,14 @@ app.use(express.static('views/public'));
 app.use('/documents', document,async (req, res, next)=>{(await db).static.add(4);return next();},express.static('views/certifcate'));
 
 app.get('/', auth,async (req, res) => {
+  // Token tekshiruvi
+  const x_token = req.cookies['x-web-token'];
+  if (x_token) {
+    console.log('x-token (birinchi 5 ta belgi):', x_token.substring(0, 5));
+  } else {
+    console.log('x-token topilmadi!');
+  }
+  
   let bolimlar = {
     role: false,
     user: false,

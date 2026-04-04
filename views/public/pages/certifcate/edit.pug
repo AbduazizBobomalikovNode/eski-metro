@@ -1679,6 +1679,98 @@ html(lang='en')
 
 
           // content-wrapper ends
+
+          // Confirmation modal for real:false documents
+          #confirmModal.confirm-modal-overlay(style='display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:99999; align-items:center; justify-content:center;')
+            .confirm-modal-box(style='background:#fff; border-radius:12px; padding:30px 35px; max-width:600px; width:90%; box-shadow:0 8px 32px rgba(0,0,0,0.3); text-align:center;')
+              .confirm-modal-icon(style='font-size:48px; color:#e67e22; margin-bottom:15px;')
+                i.mdi.mdi-alert-circle-outline
+              h4(style='color:#333; margin-bottom:15px; font-weight:600;') ⚠️ Diqqat! Hujjatni tekshiring!
+              p(style='color:#555; font-size:14px; line-height:1.7; text-align:left; margin-bottom:20px;')
+                | Ushbu hujjat yaxshilab tekshirib chiqish kerak, chunki bu hujjat PDF ichidagi ma'lumotlarni kod orqali o'qib avtomatik to'ldirilgan. 
+                | Ma'lumotlarni tekshirish uchun sizga yuklab bergan PDF faylimizga qarashingiz mumkin. 
+                br
+                br
+                strong(style='color:#e74c3c;') Formadagi ma'lumotlar PDF hujjatdagi ma'lumotlarga qisman mos bo'lmasligi mumkin, iltimos buni tekshirib chiqing.
+              .confirm-modal-pdf-link(style='margin-bottom:20px;')
+                a#pdfDownloadLink.btn.btn-outline-primary(href='#' target='_blank' style='text-decoration:none;')
+                  i.mdi.mdi-file-pdf(style='margin-right:5px;')
+                  | PDF faylni yuklab olish
+              hr(style='margin:20px 0;')
+              p(style='color:#333; font-size:14px; margin-bottom:10px;')
+                | Hujjatni tahrirlash uchun pastdagi maydonga 
+                strong "tushundim" 
+                | deb yozing:
+              input#confirmInput.form-control(type='text' placeholder='"tushundim" deb yozing...' style='text-align:center; margin-bottom:15px; font-size:16px; border:2px solid #ddd; border-radius:8px; padding:10px;')
+              button#confirmBtn.btn.btn-success(disabled='' style='width:100%; padding:10px; font-size:16px; border-radius:8px; opacity:0.5; cursor:not-allowed;')
+                i.mdi.mdi-check-circle(style='margin-right:5px;')
+                | Tasdiqlash
+
+          script.
+            (function() {
+              var isRealFalse = !{JSON.stringify(typeof real !== 'undefined' && real === false)};
+              var pdfLink = '#{link}';
+              
+              if (isRealFalse) {
+                // Show modal
+                var modal = document.getElementById('confirmModal');
+                modal.style.display = 'flex';
+                
+                // Set PDF download link
+                var pdfDownloadLink = document.getElementById('pdfDownloadLink');
+                if (pdfLink) {
+                  pdfDownloadLink.href = pdfLink;
+                }
+                
+                // Auto-download PDF
+                if (pdfLink) {
+                  var downloadLink = document.createElement('a');
+                  downloadLink.href = pdfLink;
+                  downloadLink.download = '';
+                  downloadLink.target = '_blank';
+                  document.body.appendChild(downloadLink);
+                  downloadLink.click();
+                  document.body.removeChild(downloadLink);
+                }
+                
+                // Disable all form inputs
+                var allForms = document.querySelectorAll('.forms-sample');
+                allForms.forEach(function(form) {
+                  var inputs = form.querySelectorAll('input, textarea, select, button');
+                  inputs.forEach(function(input) {
+                    input.disabled = true;
+                  });
+                });
+                
+                // Listen for "tushundim" input
+                var confirmInput = document.getElementById('confirmInput');
+                var confirmBtn = document.getElementById('confirmBtn');
+                
+                confirmInput.addEventListener('input', function() {
+                  if (confirmInput.value.trim().toLowerCase() === 'tushundim') {
+                    confirmBtn.disabled = false;
+                    confirmBtn.style.opacity = '1';
+                    confirmBtn.style.cursor = 'pointer';
+                  } else {
+                    confirmBtn.disabled = true;
+                    confirmBtn.style.opacity = '0.5';
+                    confirmBtn.style.cursor = 'not-allowed';
+                  }
+                });
+                
+                // On confirm, unlock editing
+                confirmBtn.addEventListener('click', function() {
+                  modal.style.display = 'none';
+                  allForms.forEach(function(form) {
+                    var inputs = form.querySelectorAll('input, textarea, select, button');
+                    inputs.forEach(function(input) {
+                      input.disabled = false;
+                    });
+                  });
+                });
+              }
+            })();
+
           // partial:partials/_footer.html
           footer.footer
           script(src='../../asserts/js/table_view.js')

@@ -35,6 +35,9 @@ module.exports = async function (req, res, next) {
             return res.cookie("x-web-token", "", {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === "production",
+                sameSite: "lax",
+                path: "/",
+                maxAge: 0
               })
               .status(200)
               .send(`<script>setTimeout(()=>{window.location.href = '/login';},10);</script>`);
@@ -45,6 +48,9 @@ module.exports = async function (req, res, next) {
             return res.cookie("x-web-token", "", {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === "production",
+                sameSite: "lax",
+                path: "/",
+                maxAge: 0
               })
               .status(200)
               .send(`<script>setTimeout(()=>{window.location.href = '/login';},10);</script>`);
