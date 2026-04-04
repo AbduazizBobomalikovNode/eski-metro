@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const jwt_my_key = process.env.JWT_MY_KEY || "bu_dunyo_sinov_dunyo";
+const JWT_EXPIRY_SECONDS = 60 * 60; // 1 soat
 
 // let x = {
 //     'user': ['get/user','get/device','get/role','get/all', 'add', 'uptade', 'delete'],
@@ -56,6 +57,17 @@ module.exports = async function (req, res, next) {
               .send(`<script>setTimeout(()=>{window.location.href = '/login';},10);</script>`);
         }
         req.user = user;
+        // Sliding expiration: har bir requestda tokenni yangilash
+        const newPayload = { ...user };
+        newPayload.exp = Math.floor(Date.now() / 1000) + JWT_EXPIRY_SECONDS;
+        const newToken = jwt.sign(newPayload, jwt_my_key);
+        res.cookie("x-web-token", newToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+            path: "/",
+            maxAge: JWT_EXPIRY_SECONDS * 1000
+        });
         return next();
     } catch (err) {
         console.log(err);

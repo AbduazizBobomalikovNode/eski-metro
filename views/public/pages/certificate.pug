@@ -284,7 +284,7 @@ html(lang='en')
                               .template-demo
                                 .btn-group(role='group' aria-label='Basic example')
                                   if page-1 != 0 
-                                    a(href='/certifcate/page/'+(page-1))
+                                    a(href='/certifcate/page/'+(page-1)+queryString)
                                       button.btn.btn-outline-secondary(type='button') 
                                         i.mdi.mdi-arrow-left-bold
                                   else 
@@ -294,10 +294,10 @@ html(lang='en')
                                     if page-1==x
                                       button.btn.btn-primary(type='button') #{x+1}
                                     else
-                                      a(href='/certifcate/page/'+(x+1))
+                                      a(href='/certifcate/page/'+(x+1)+queryString)
                                         button.btn.btn-outline-secondary(type='button') #{x+1}
                                   if page+1<=parseInt(filter_count/15)+(filter_count%15>0?1:0) 
-                                    a(href='/certifcate/page/'+(page+1))
+                                    a(href='/certifcate/page/'+(page+1)+queryString)
                                       button.btn.btn-outline-secondary(type='button')   
                                         i.mdi.mdi-arrow-right-bold
                                   else 

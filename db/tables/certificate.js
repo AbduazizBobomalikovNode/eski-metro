@@ -222,6 +222,22 @@ function Certificate(table) {
             .sort({ son: -1 }).limit(limit).skip(skip).toArray();
         return result;
     };
+    this.countCertificateFilter = async ({ doc, lang, date, employee }) => {
+        let quary = {};
+        if (doc != "Hammasi" && doc) {
+            quary.type = doc;
+        }
+        if (lang != "Hammasi" && lang) {
+            quary.lang = lang;
+        }
+        if (date != "Hammasi" && date) {
+            quary.date = date;
+        }
+        if (employee != "Hammasi" && employee) {
+            quary.employee = employee;
+        }
+        return await table.countDocuments(quary);
+    };
     this.addCertificate = async (certificate) => {
         const result = await table
             .insertOne(certificate)

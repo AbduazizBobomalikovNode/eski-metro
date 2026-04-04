@@ -94,6 +94,7 @@ router.get("/", auth, async (req, res) => {
     lang: lang,
     doc_name: doc_name,
     employee: employee,
+    queryString: '',
     ...bolimlar,
     user: req.user
   });
@@ -114,7 +115,7 @@ router.get("/page/:page", auth, async (req, res) => {
     certificates = await (await db).certificate.searchDocument(query.search);
     fcount = certificates.length;
   }else{
-    fcount = certificate.length;
+    fcount = await (await db).certificate.countCertificateFilter(query);
     certificates = await (await db).certificate.getCertificateAllFilter(page * 15 - 15, 15, query);
   }
   // let id = (await (await db).role.getRoleForObj({ name: "Qiyoslovchi" }))[0].id;
@@ -177,6 +178,15 @@ router.get("/page/:page", auth, async (req, res) => {
     bolimlar.activeDocumentDelete = true;
   }
   // console.log(bolimlar,req.user.rolePath);
+  // Query string ni saqlash (pagination uchun)
+  let qsParts = [];
+  if (query.doc && query.doc !== 'Hammasi') qsParts.push('doc=' + encodeURIComponent(query.doc));
+  if (query.lang && query.lang !== 'Hammasi') qsParts.push('lang=' + encodeURIComponent(query.lang));
+  if (query.date && query.date !== 'Hammasi') qsParts.push('date=' + encodeURIComponent(query.date));
+  if (query.employee && query.employee !== 'Hammasi') qsParts.push('employee=' + encodeURIComponent(query.employee));
+  if (query.search) qsParts.push('search=' + encodeURIComponent(query.search));
+  let queryString = qsParts.length > 0 ? '?' + qsParts.join('&') : '';
+
   res.render('public/pages/certificate', {
     path: '../',
     docs: certificates,
@@ -186,6 +196,7 @@ router.get("/page/:page", auth, async (req, res) => {
     lang: lang,
     doc_name: doc_name,
     employee: employee,
+    queryString: queryString,
     ...bolimlar,
     user: req.user
   });
