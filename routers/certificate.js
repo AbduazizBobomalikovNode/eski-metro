@@ -50,6 +50,7 @@ router.get("/", auth, async (req, res) => {
     task: false,
     activeDocumentUpdate: false,
     activeDocumentDelete: false,
+    restoreDateEdit: false,
   };
   if (req.user.rolePath.includes("/certifcate")) {
     bolimlar.certifcate = true;
@@ -83,6 +84,9 @@ router.get("/", auth, async (req, res) => {
   }
   if (req.user.rolePath.includes("activeDocumentDelete")) {
     bolimlar.activeDocumentDelete = true;
+  }
+  if (req.user.rolePath.includes("/certifcate/restore_date/edit")) {
+    bolimlar.restoreDateEdit = true;
   }
   // (await db).certificate.allDocUpdate();
   res.render('public/pages/certificate', {
@@ -142,7 +146,8 @@ router.get("/page/:page", auth, async (req, res) => {
     role: false,
     user: false,
     certifcate: false,
-    task: false
+    task: false,
+    restoreDateEdit: false,
   };
   if (req.user.rolePath.includes("/certifcate")) {
     bolimlar.certifcate = true;
@@ -176,6 +181,9 @@ router.get("/page/:page", auth, async (req, res) => {
   }
   if (req.user.rolePath.includes("activeDocumentDelete")) {
     bolimlar.activeDocumentDelete = true;
+  }
+  if (req.user.rolePath.includes("/certifcate/restore_date/edit")) {
+    bolimlar.restoreDateEdit = true;
   }
   // console.log(bolimlar,req.user.rolePath);
   // Query string ni saqlash (pagination uchun)
@@ -722,11 +730,18 @@ router.get('/update/:id', auth, async (req, res) => {
     });
   }
   let certifcate = await (await db).certificate.getCertificate(id);
-  // console.log(certifcate);
   if (!certifcate) {
     return res.render('public/pages/erors/error-404', {
       status: 404,
       error: 'ushbu idga mos role to\'pilmadi!',
+      path: '/certifcate'
+    });
+  }
+  // restore_date qiymati bo'lsa faqat direktor tahrirlay oladi
+  if (certifcate.restore_date && !req.user.rolePath.includes("/certifcate/restore_date/edit")) {
+    return res.render('public/pages/erors/error-404', {
+      status: 403,
+      error: 'Bu sertifikat qayta tiklangan (restore_date mavjud). Uni faqat Direktor tahrirlashi mumkin!',
       path: '/certifcate'
     });
   }
@@ -755,10 +770,6 @@ router.get('/update/:id', auth, async (req, res) => {
 });
 
 router.post('/update/:id', auth, async (req, res) => {
-  // const { error } = validate(req.body);
-  // if (error) {
-  //   return res.status(400).send(error.details[0].message)
-  // }
   let body = req.body;
 
   let id = parseInt(req.params.id);
@@ -769,7 +780,6 @@ router.post('/update/:id', auth, async (req, res) => {
       error: 'id xato berildi, id butun son qiymat bo\'lishi shart!',
       path: '/certifcate'
     });
-    // return res.status(400).json({ error: 'id xato berildi, id butun son qiymat bo\'lishi shart' });
   }
 
   if (!body) {
@@ -778,7 +788,6 @@ router.post('/update/:id', auth, async (req, res) => {
       error: 'no\'tog\'ri so\'rov. bosh qiymat yuborilgan!',
       path: '/certifcate'
     });
-    // return res.status(400).json({ error: 'no\'tog\'ri so\'rov. bosh qiymat yuborilgan.' });
   }
 
   if (body.hasOwnProperty("id")) {
@@ -787,7 +796,6 @@ router.post('/update/:id', auth, async (req, res) => {
       error: 'id qiymatini o\'zgartirib bo\'lmaydi!',
       path: '/certifcate'
     });
-    // return res.status(400).json({ error: 'id qiymatini o\'zgartirib bo\'lmaydi.' });
   }
 
   let certificate = await (await db).certificate.getCertificate(id);
@@ -797,9 +805,15 @@ router.post('/update/:id', auth, async (req, res) => {
       error: 'ushbu idga mos certificate to\'pilmadi!',
       path: '/certifcate'
     });
-    // return res.status(404).json({ error: 'ushbu idga mos certificate to\'pilmadi!' });
   }
-  // console.log("certificate : ",certificate);
+  // restore_date qiymati bo'lsa faqat direktor tahrirlay oladi
+  if (certificate.restore_date && !req.user.rolePath.includes("/certifcate/restore_date/edit")) {
+    return res.render('public/pages/erors/error-404', {
+      status: 403,
+      error: 'Bu sertifikat qayta tiklangan (restore_date mavjud). Uni faqat Direktor tahrirlashi mumkin!',
+      path: '/certifcate'
+    });
+  }
 
   let flag = false;
   if (certificate.status) {
@@ -1033,6 +1047,14 @@ router.get('/delete/:id', auth, async (req, res) => {
     return res.render('public/pages/erors/error-404', {
       status: 404,
       error: 'ushbu idga mos Hujjat to\'pilmadi!',
+      path: '/certifcate'
+    });
+  }
+  // restore_date qiymati bo'lsa faqat direktor o'chira oladi
+  if (certifcate.restore_date && !req.user.rolePath.includes("/certifcate/restore_date/edit")) {
+    return res.render('public/pages/erors/error-404', {
+      status: 403,
+      error: 'Bu sertifikat qayta tiklangan (restore_date mavjud). Uni faqat Direktor o\'chira oladi!',
       path: '/certifcate'
     });
   }

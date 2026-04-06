@@ -263,20 +263,39 @@ html(lang='en')
                                     a(href = docs[x].link)
                                       button.btn.btn-outline-primary(type='button')
                                         i.mdi.mdi-eye
-                                  if update && docs[x].status && activeDocumentUpdate 
-                                    a(href='/certifcate/update/'+docs[x].id)
-                                      button.btn.btn-outline-light(type='button' title='tahrirlash')
-                                        i.mdi.mdi-lead-pencil
-                                  else if update && !docs[x].status
-                                    a(href='/certifcate/update/'+docs[x].id)
-                                      button.btn.btn-outline-light(type='button' title='tahrirlash')
-                                        i.mdi.mdi-lead-pencil
-                                  if deletes && docs[x].status && activeDocumentDelete
-                                    button.btn.btn-outline-danger(type='button' title="o'chirish" onclick='openDeleteModal("'+docs[x].id+'")')
-                                      i.mdi.mdi-close
-                                  else if deletes && !docs[x].status
-                                    button.btn.btn-outline-danger(type='button' title="o'chirish" onclick='openDeleteModal("'+docs[x].id+'")')
-                                      i.mdi.mdi-close
+                                  if docs[x].restore_date
+                                    //- restore_date bor => faqat restoreDateEdit huquqi bo'lsa tahrirlash/o'chirish ko'rinadi
+                                    if restoreDateEdit
+                                      if update && docs[x].status && activeDocumentUpdate 
+                                        a(href='/certifcate/update/'+docs[x].id)
+                                          button.btn.btn-outline-warning(type='button' title='tahrirlash (Direktor)')
+                                            i.mdi.mdi-lead-pencil
+                                      else if update && !docs[x].status
+                                        a(href='/certifcate/update/'+docs[x].id)
+                                          button.btn.btn-outline-warning(type='button' title='tahrirlash (Direktor)')
+                                            i.mdi.mdi-lead-pencil
+                                      if deletes && docs[x].status && activeDocumentDelete
+                                        button.btn.btn-outline-danger(type='button' title="o'chirish (Direktor)" onclick='openDeleteModal("'+docs[x].id+'")')
+                                          i.mdi.mdi-close
+                                      else if deletes && !docs[x].status
+                                        button.btn.btn-outline-danger(type='button' title="o'chirish (Direktor)" onclick='openDeleteModal("'+docs[x].id+'")')
+                                          i.mdi.mdi-close
+                                  else
+                                    //- restore_date yo'q => oddiy huquq tekshiruvi
+                                    if update && docs[x].status && activeDocumentUpdate 
+                                      a(href='/certifcate/update/'+docs[x].id)
+                                        button.btn.btn-outline-light(type='button' title='tahrirlash')
+                                          i.mdi.mdi-lead-pencil
+                                    else if update && !docs[x].status
+                                      a(href='/certifcate/update/'+docs[x].id)
+                                        button.btn.btn-outline-light(type='button' title='tahrirlash')
+                                          i.mdi.mdi-lead-pencil
+                                    if deletes && docs[x].status && activeDocumentDelete
+                                      button.btn.btn-outline-danger(type='button' title="o'chirish" onclick='openDeleteModal("'+docs[x].id+'")')
+                                        i.mdi.mdi-close
+                                    else if deletes && !docs[x].status
+                                      button.btn.btn-outline-danger(type='button' title="o'chirish" onclick='openDeleteModal("'+docs[x].id+'")')
+                                        i.mdi.mdi-close
 
                         tfoot 
                           tr 
