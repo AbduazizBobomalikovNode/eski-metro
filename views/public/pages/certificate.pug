@@ -297,32 +297,47 @@ html(lang='en')
                                       button.btn.btn-outline-danger(type='button' title="o'chirish" onclick='openDeleteModal("'+docs[x].id+'")')
                                         i.mdi.mdi-close
 
-                        tfoot 
-                          tr 
-                            td(colspan=4)  
-                              .template-demo
-                                .btn-group(role='group' aria-label='Basic example')
-                                  if page-1 != 0 
-                                    a(href='/certifcate/page/'+(page-1)+queryString)
-                                      button.btn.btn-outline-secondary(type='button') 
-                                        i.mdi.mdi-arrow-left-bold
-                                  else 
-                                    button.btn.btn-outline-secondary.disabled(type='button') 
-                                      i.mdi.mdi-arrow-left-bold
-                                  - for (var x = 0; x < filter_count/15; x++)
-                                    if page-1==x
-                                      button.btn.btn-primary(type='button') #{x+1}
-                                    else
-                                      a(href='/certifcate/page/'+(x+1)+queryString)
-                                        button.btn.btn-outline-secondary(type='button') #{x+1}
-                                  if page+1<=parseInt(filter_count/15)+(filter_count%15>0?1:0) 
-                                    a(href='/certifcate/page/'+(page+1)+queryString)
-                                      button.btn.btn-outline-secondary(type='button')   
-                                        i.mdi.mdi-arrow-right-bold
-                                  else 
-                                    button.btn.btn-outline-secondary.disabled(type='button')   
-                                      i.mdi.mdi-arrow-right-bold
-                            td(colspan=4)  #{filter_count} ta element mavjut
+                    //- Smart ellipsis pagination
+                    -
+                      var totalPages = parseInt(filter_count/15) + (filter_count%15>0?1:0);
+                      var curPage = page;
+                      var delta = 2;
+                      var pages = [];
+                      var left = Math.max(2, curPage - delta);
+                      var right = Math.min(totalPages - 1, curPage + delta);
+                      pages.push(1);
+                      if(left > 2) pages.push('...');
+                      for(var pi = left; pi <= right; pi++) pages.push(pi);
+                      if(right < totalPages - 1) pages.push('...');
+                      if(totalPages > 1) pages.push(totalPages);
+                    div(style='display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-top:14px; padding:6px 2px;')
+                      div(style='color:#aaa; font-size:13px; white-space:nowrap;') #{filter_count} ta element mavjud
+                      div(style='display:flex; align-items:center; flex-wrap:wrap; gap:3px;')
+                        //- Chap ok
+                        if curPage > 1
+                          a(href='/certifcate/page/'+(curPage-1)+queryString)
+                            button.btn.btn-outline-secondary(type='button' style='padding:5px 11px; line-height:1;')
+                              i.mdi.mdi-chevron-left
+                        else
+                          button.btn.btn-outline-secondary.disabled(type='button' style='padding:5px 11px; line-height:1; opacity:0.4; cursor:default;')
+                            i.mdi.mdi-chevron-left
+                        //- Sahifa raqamlari (ellipsis bilan)
+                        each pg in pages
+                          if pg === '...'
+                            span(style='padding:5px 6px; color:#888; font-size:14px; user-select:none;') …
+                          else if pg === curPage
+                            button.btn.btn-primary(type='button' style='padding:5px 11px; min-width:36px; font-weight:600;') #{pg}
+                          else
+                            a(href='/certifcate/page/'+pg+queryString)
+                              button.btn.btn-outline-secondary(type='button' style='padding:5px 11px; min-width:36px;') #{pg}
+                        //- O'ng ok
+                        if curPage < totalPages
+                          a(href='/certifcate/page/'+(curPage+1)+queryString)
+                            button.btn.btn-outline-secondary(type='button' style='padding:5px 11px; line-height:1;')
+                              i.mdi.mdi-chevron-right
+                        else
+                          button.btn.btn-outline-secondary.disabled(type='button' style='padding:5px 11px; line-height:1; opacity:0.4; cursor:default;')
+                            i.mdi.mdi-chevron-right
           // content-wrapper ends
 
           // Delete confirmation modal
