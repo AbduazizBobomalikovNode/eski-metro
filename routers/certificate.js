@@ -14,7 +14,66 @@ const { unlinkSync } = require('fs');
 
 
 
-setTimeout(async () => { db = await db }, 100);//
+setTimeout(async () => { 
+  db = await db;
+  // MongoDB indekslarni bir marta yaratish
+  (await db).certificate.ensureIndexes();
+}, 100);//
+
+// ============================================================
+// YANGI: Real-time qidiruv API (AJAX, reload yo'q)
+// ============================================================
+const PAGE_SIZE = 15;
+const DOC_NAME = {
+  1: "qiyoslash guvohnomasi",
+  2: "yuqori aniqlikdagi qiyoslash guvohnomasi",
+  3: "avtosisterna qiyoslash guvohnomasi",
+  4: "attestatsiyadan o'tkazish sertifikati",
+  5: "O'lchash vositasining yaroqsizlikgi",
+  6: "sinov vositasining yaroqsizligi",
+  7: "pasport",
+};
+const LANG_NAME = { uz: "o'zbekcha", ru: "ruscha" };
+
+router.get('/api_search', auth, async (req, res) => {
+  try {
+    const { q = '', doc = '', lang = '', date = '', employee = '' } = req.query;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const skip = (page - 1) * PAGE_SIZE;
+
+    const { docs, total } = await (await db).certificate.searchAndFilter(
+      q,
+      { doc, lang, date, employee },
+      skip,
+      PAGE_SIZE
+    );
+
+    // son raqamiga mos tartib
+    const totalPages = Math.ceil(total / PAGE_SIZE) || 1;
+
+    // har bir doc uchun display qiymatlarini qo'shib yuboramiz
+    const enriched = docs.map((d, i) => ({
+      ...d,
+      son_display: d.son,
+      type_display: DOC_NAME[d.type] || d.type,
+      lang_display: LANG_NAME[d.lang] || d.lang,
+      // ruxsat flaglari (frontend uchun)
+      _canUpdate:  req.user.rolePath.includes('/certifcate/update'),
+      _canDelete:  req.user.rolePath.includes('/certifcate/delete'),
+      _canView:    req.user.rolePath.includes('/document'),
+      _canActive:  req.user.rolePath.includes('activeDocumentUpdate'),
+      _canActiveDelete: req.user.rolePath.includes('activeDocumentDelete'),
+      _restoreDateEdit: req.user.rolePath.includes('/certifcate/restore_date/edit'),
+    }));
+
+    return res.json({ docs: enriched, total, page, totalPages });
+  } catch (err) {
+    console.error('[api/search]', err);
+    return res.status(500).json({ error: 'Qidirishda xato yuz berdi' });
+  }
+});
+
+
 
 router.get("/", auth, async (req, res) => {
   let docs = await (await db).certificate.getCertificateAll();

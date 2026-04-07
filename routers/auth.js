@@ -44,7 +44,7 @@ Auth.post('/', async (req, res) => {
         }
         user[0].rolePath = array.join();
         user[0].exp = Math.floor(Date.now() / 1000) + 60*60;
-        let pas_flag =auth.password == user[0].password || await bcrypt.compare(auth.password, user[0].password);
+        let pas_flag = String(auth.password) === String(user[0].password) || await bcrypt.compare(String(auth.password), String(user[0].password));
         // console.log('pas', pas_flag, user[0].rolePath);
         action({
             user: user[0].name,

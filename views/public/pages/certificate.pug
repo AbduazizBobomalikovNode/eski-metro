@@ -138,7 +138,7 @@ html(lang='en')
                             | #{count} 
                             mark(style='background:none;color: greenyellow;')  ta
                     h6.text-muted.font-weight-normal.text-center
-                      b #{filter_count} 
+                      b#cert-count #{filter_count} 
                       |  ta
                       br
                       |  elementdan filtrlangan
@@ -222,7 +222,7 @@ html(lang='en')
                             th  Ma'lumot manbai
                             th  Status 
                             th  Ammallar 
-                        tbody
+                        tbody#cert-tbody
                           - for (var x = 0; x < docs.length; x++)
                             tr(style=(docs[x].real === false ? 'background-color: rgba(255,152,0,0.15);' : ''))
                               td
@@ -297,47 +297,8 @@ html(lang='en')
                                       button.btn.btn-outline-danger(type='button' title="o'chirish" onclick='openDeleteModal("'+docs[x].id+'")')
                                         i.mdi.mdi-close
 
-                    //- Smart ellipsis pagination
-                    -
-                      var totalPages = parseInt(filter_count/15) + (filter_count%15>0?1:0);
-                      var curPage = page;
-                      var delta = 2;
-                      var pages = [];
-                      var left = Math.max(2, curPage - delta);
-                      var right = Math.min(totalPages - 1, curPage + delta);
-                      pages.push(1);
-                      if(left > 2) pages.push('...');
-                      for(var pi = left; pi <= right; pi++) pages.push(pi);
-                      if(right < totalPages - 1) pages.push('...');
-                      if(totalPages > 1) pages.push(totalPages);
-                    div(style='display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-top:14px; padding:6px 2px;')
-                      div(style='color:#aaa; font-size:13px; white-space:nowrap;') #{filter_count} ta element mavjud
-                      div(style='display:flex; align-items:center; flex-wrap:wrap; gap:3px;')
-                        //- Chap ok
-                        if curPage > 1
-                          a(href='/certifcate/page/'+(curPage-1)+queryString)
-                            button.btn.btn-outline-secondary(type='button' style='padding:5px 11px; line-height:1;')
-                              i.mdi.mdi-chevron-left
-                        else
-                          button.btn.btn-outline-secondary.disabled(type='button' style='padding:5px 11px; line-height:1; opacity:0.4; cursor:default;')
-                            i.mdi.mdi-chevron-left
-                        //- Sahifa raqamlari (ellipsis bilan)
-                        each pg in pages
-                          if pg === '...'
-                            span(style='padding:5px 6px; color:#888; font-size:14px; user-select:none;') …
-                          else if pg === curPage
-                            button.btn.btn-primary(type='button' style='padding:5px 11px; min-width:36px; font-weight:600;') #{pg}
-                          else
-                            a(href='/certifcate/page/'+pg+queryString)
-                              button.btn.btn-outline-secondary(type='button' style='padding:5px 11px; min-width:36px;') #{pg}
-                        //- O'ng ok
-                        if curPage < totalPages
-                          a(href='/certifcate/page/'+(curPage+1)+queryString)
-                            button.btn.btn-outline-secondary(type='button' style='padding:5px 11px; line-height:1;')
-                              i.mdi.mdi-chevron-right
-                        else
-                          button.btn.btn-outline-secondary.disabled(type='button' style='padding:5px 11px; line-height:1; opacity:0.4; cursor:default;')
-                            i.mdi.mdi-chevron-right
+                    //- Pagination JS boshqaradi (AJAX)
+                    #cert-pagination
           // content-wrapper ends
 
           // Delete confirmation modal
@@ -360,6 +321,205 @@ html(lang='en')
                   button#deleteConfirmBtn.btn.btn-danger(disabled='' style='flex:1; padding:10px; font-size:14px; border-radius:8px; opacity:0.5; cursor:not-allowed;')
                     i.mdi.mdi-delete(style='margin-right:5px;')
                     | O'chirish
+
+          script.
+            // =============================================
+            // window.__META__ — server dan client ga ma'lumot
+            // =============================================
+            window.__META__ = {
+              docName: !{JSON.stringify(doc_name)},
+              langName: !{JSON.stringify(lang)},
+              permissions: {
+                canUpdate:      !{JSON.stringify(update||false)},
+                canDelete:      !{JSON.stringify(deletes||false)},
+                canView:        !{JSON.stringify(view||false)},
+                canActive:      !{JSON.stringify(activeDocumentUpdate||false)},
+                canActiveDelete:!{JSON.stringify(activeDocumentDelete||false)},
+                restoreDateEdit:!{JSON.stringify(restoreDateEdit||false)},
+              }
+            };
+
+            // =============================================
+            // Real-time AJAX qidiruv logikasi
+            // =============================================
+            (function(){
+              var DEBOUNCE_MS = 250;
+              var PAGE_SIZE   = 15;
+              var timer       = null;
+              var curPage     = 1;
+              var M           = window.__META__;
+
+              function esc(str){ return str ? String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : ''; }
+
+              function buildOrgShort(org){
+                if(!org) return '';
+                return org.length > 25 ? esc(org.slice(0,25))+'…' : esc(org);
+              }
+
+              function actionBtns(d){
+                var html = '<div class="btn-group" role="group">';
+                if(d._canView && d.link){
+                  html += '<a href="'+esc(d.link)+'"><button class="btn btn-outline-primary" type="button"><i class="mdi mdi-eye"></i></button></a>';
+                }
+                var hasRestore = !!d.restore_date;
+                var canEdit  = hasRestore ? d._restoreDateEdit : d._canUpdate;
+                var canDel   = hasRestore ? d._restoreDateEdit : d._canDelete;
+                var editTitle = hasRestore ? "tahrirlash (Direktor)" : "tahrirlash";
+                var delTitle  = hasRestore ? "o'chirish (Direktor)" : "o'chirish";
+                var editClass = hasRestore ? 'btn-outline-warning' : 'btn-outline-light';
+
+                if(canEdit){
+                  var showEdit = d.status ? (d._canActive && d._canUpdate) : d._canUpdate;
+                  if(!d.status || showEdit){
+                    html += '<a href="/certifcate/update/'+d.id+'"><button class="btn '+editClass+'" type="button" title="'+editTitle+'"><i class="mdi mdi-lead-pencil"></i></button></a>';
+                  }
+                }
+                if(canDel){
+                  var showDel = d.status ? (d._canActiveDelete && d._canDelete) : d._canDelete;
+                  if(!d.status || showDel){
+                    html += '<button class="btn btn-outline-danger" type="button" title="'+delTitle+'" onclick="openDeleteModal('+JSON.stringify(String(d.id))+')"><i class="mdi mdi-close"></i></button>';
+                  }
+                }
+                html += '</div>';
+                return html;
+              }
+
+              function statusCell(d){
+                if(!d._canActive){
+                  return '<td>'+(d.status?'Tasdiqlangan':'Tasdiqlanmagan')+'</td>';
+                }
+                if(!d.status){
+                  return '<td><a href="/certifcate/active/'+d.id+'"><button class="btn btn-success btn-icon-text" type="button"><i class="mdi mdi-check-circle"></i> <span>Tasdiqlash</span></button></a></td>';
+                }
+                return '<td>Tasdiqlangan</td>';
+              }
+
+              function sourceCell(d){
+                if(d.restore_date){
+                  return '<td style="color:#e67e22;font-weight:500;"><i class="mdi mdi-restore" style="margin-right:3px;"></i>qayta tiklangan '+esc(d.restore_date)+'</td>';
+                }
+                return '<td style="color:#27ae60;"><i class="mdi mdi-check-circle" style="margin-right:3px;"></i>tizimni o\'zida yaratilgan</td>';
+              }
+
+              function renderRows(docs){
+                var tbody = document.getElementById('cert-tbody');
+                if(!docs || docs.length === 0){
+                  tbody.innerHTML='<tr><td colspan="13" style="text-align:center;color:#888;padding:30px;">Ma\'lumot topilmadi</td></tr>';
+                  return;
+                }
+                var html = '';
+                docs.forEach(function(d, i){
+                  var bg = d.real===false ? 'background-color:rgba(255,152,0,0.15);' : '';
+                  html += '<tr style="'+bg+'">';
+                  html += '<td><div class="form-check form-check-muted m-0"><label class="form-check-label"><input class="form-check-input" id="'+d.id+'" onclick="chekbox()" type="checkbox"></label></div></td>';
+                  html += '<td>'+esc(d.son)+'</td>';
+                  html += '<td>'+esc(d.id)+'</td>';
+                  html += '<td>'+esc(d.type_display)+'</td>';
+                  html += '<td>'+esc(d.lang_display)+'</td>';
+                  html += '<td>'+esc(d.comply_with)+'</td>';
+                  html += '<td>'+esc(d.compare)+'</td>';
+                  html += '<td>'+buildOrgShort(d.organization)+'</td>';
+                  html += '<td>'+esc(d.date)+'</td>';
+                  html += '<td>'+esc(d.employee)+'</td>';
+                  html += sourceCell(d);
+                  html += statusCell(d);
+                  html += '<td>'+actionBtns(d)+'</td>';
+                  html += '</tr>';
+                });
+                tbody.innerHTML = html;
+              }
+
+              function renderPagination(total, page, totalPages){
+                var el = document.getElementById('cert-pagination');
+                if(!el) return;
+                var delta = 2;
+                var left  = Math.max(2, page - delta);
+                var right = Math.min(totalPages - 1, page + delta);
+                var pages = [1];
+                if(left > 2) pages.push('...');
+                for(var pi = left; pi <= right; pi++) pages.push(pi);
+                if(right < totalPages - 1) pages.push('...');
+                if(totalPages > 1) pages.push(totalPages);
+
+                var html = '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:14px;padding:6px 2px;">';
+                html += '<div style="color:#aaa;font-size:13px;">'+total+' ta element mavjud</div>';
+                html += '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:3px;">';
+
+                // Chap ok
+                if(page > 1){
+                  html += '<button class="btn btn-outline-secondary" style="padding:5px 11px;" onclick="doSearch('+( page-1 )+')" type="button"><i class="mdi mdi-chevron-left"></i></button>';
+                } else {
+                  html += '<button class="btn btn-outline-secondary" style="padding:5px 11px;opacity:0.4;cursor:default;" disabled type="button"><i class="mdi mdi-chevron-left"></i></button>';
+                }
+
+                pages.forEach(function(pg){
+                  if(pg === '...'){
+                    html += '<span style="padding:5px 6px;color:#888;font-size:14px;">…</span>';
+                  } else if(pg === page){
+                    html += '<button class="btn btn-primary" style="padding:5px 11px;min-width:36px;font-weight:600;" type="button">'+pg+'</button>';
+                  } else {
+                    html += '<button class="btn btn-outline-secondary" style="padding:5px 11px;min-width:36px;" onclick="doSearch('+pg+')" type="button">'+pg+'</button>';
+                  }
+                });
+
+                // O'ng ok
+                if(page < totalPages){
+                  html += '<button class="btn btn-outline-secondary" style="padding:5px 11px;" onclick="doSearch('+(page+1)+')" type="button"><i class="mdi mdi-chevron-right"></i></button>';
+                } else {
+                  html += '<button class="btn btn-outline-secondary" style="padding:5px 11px;opacity:0.4;cursor:default;" disabled type="button"><i class="mdi mdi-chevron-right"></i></button>';
+                }
+
+                html += '</div></div>';
+                el.innerHTML = html;
+
+                // count yangilash
+                var countEl = document.getElementById('cert-count');
+                if(countEl) countEl.textContent = total;
+              }
+
+              function buildUrl(page){
+                var q        = (document.getElementById('searchdata')||{}).value || '';
+                var doc      = (document.getElementById('filter1')||{}).value || '';
+                var lang     = (document.getElementById('filter2')||{}).value || '';
+                var dateOk   = (document.getElementById('filter3_chek')||{}).checked;
+                var date     = dateOk ? ((document.getElementById('filter3')||{}).value || '') : '';
+                var employee = (document.getElementById('filter4')||{}).value || '';
+                return '/certifcate/api_search?' + new URLSearchParams({q:q,doc:doc,lang:lang,date:date,employee:employee,page:page||1}).toString();
+              }
+
+              window.doSearch = function(page){
+                curPage = page || 1;
+                var url = buildUrl(curPage);
+                fetch(url, {credentials:'same-origin'})
+                  .then(function(r){ return r.json(); })
+                  .then(function(data){
+                    if(data.error){ console.error(data.error); return; }
+                    renderRows(data.docs);
+                    renderPagination(data.total, data.page, data.totalPages);
+                  })
+                  .catch(function(e){ console.error('Search xato:',e); });
+              };
+
+              function trigger(){ clearTimeout(timer); timer = setTimeout(function(){ doSearch(1); }, DEBOUNCE_MS); }
+
+              document.addEventListener('DOMContentLoaded', function(){
+                // Birinchi kirishda pug tomonidan berilgan ma'lumotlar orqali renderPagination bitta chaqirib qoyamiz
+                renderPagination(parseInt('#{filter_count}'), parseInt('#{page}'), parseInt('#{parseInt(filter_count/15) + (filter_count%15>0?1:0)}'));
+
+                ['filter1','filter2','filter4'].forEach(function(id){
+                  var el = document.getElementById(id);
+                  if(el) el.addEventListener('change', function(){ doSearch(1); });
+                });
+                var f3 = document.getElementById('filter3');
+                var f3c = document.getElementById('filter3_chek');
+                if(f3) f3.addEventListener('change', function(){ if(f3c && f3c.checked) doSearch(1); });
+                if(f3c) f3c.addEventListener('change', function(){ doSearch(1); });
+                var sd = document.getElementById('searchdata');
+                if(sd) sd.addEventListener('input', trigger);
+                var sb = document.getElementById('search');
+                if(sb) sb.addEventListener('click', function(){ doSearch(1); });
+              });
+            })();
 
           script.
             var currentDeleteId = '';
@@ -423,3 +583,123 @@ html(lang='en')
           // Custom js for this page
           script(src=path+'../assets/js/dashboard.js')
           // End custom js for this page
+
+          // =============================================
+          // Yordamchi dumaloq drag scroll tugmalar
+          // =============================================
+          .custom-scroll-btn#scroll-btn-x(style='position:fixed; bottom:20px; left:260px; width:50px; height:50px; background-color:rgba(0,200,83,0.6); border-radius:50%; z-index:9999; cursor:grab; box-shadow:0 4px 10px rgba(0,0,0,0.3); display:none; transition: background-color 0.2s; align-items:center; justify-content:center; color:white; font-size:24px;')
+            i.mdi.mdi-arrow-left-right
+          .custom-scroll-btn#scroll-btn-y(style='position:fixed; top:120px; right:20px; width:50px; height:50px; background-color:rgba(0,123,255,0.6); border-radius:50%; z-index:9999; cursor:grab; box-shadow:0 4px 10px rgba(0,0,0,0.3); display:none; transition: background-color 0.2s; align-items:center; justify-content:center; color:white; font-size:24px;')
+            i.mdi.mdi-arrow-up-down
+
+          script.
+            (function(){
+              var tableContainer = document.querySelector('.table-responsive');
+              if(!tableContainer) return;
+
+              var btnX = document.getElementById('scroll-btn-x');
+              var btnY = document.getElementById('scroll-btn-y');
+
+              function getBoundsX() {
+                var sidebar = document.getElementById('sidebar');
+                var w = (sidebar && window.innerWidth > 991) ? sidebar.offsetWidth : 0;
+                return { min: w + 20, max: window.innerWidth - 70 }; // 70px (width 50 + pad 20)
+              }
+              function getBoundsY() {
+                return { min: 120, max: window.innerHeight - 70 };
+              }
+
+              function updateButtonPositions() {
+                if (isDraggingX || isDraggingY) return;
+                var bX = getBoundsX();
+                var bY = getBoundsY();
+
+                var maxScrollX = tableContainer.scrollWidth - tableContainer.clientWidth;
+                if (maxScrollX > 0) {
+                  btnX.style.display = 'flex';
+                  var percentX = tableContainer.scrollLeft / maxScrollX;
+                  btnX.style.left = (bX.min + percentX * (bX.max - bX.min)) + 'px';
+                } else {
+                  btnX.style.display = 'none';
+                }
+
+                var maxScrollY = tableContainer.scrollHeight - tableContainer.clientHeight;
+                if (maxScrollY > 0) {
+                  btnY.style.display = 'flex';
+                  var percentY = tableContainer.scrollTop / maxScrollY;
+                  btnY.style.top = (bY.min + percentY * (bY.max - bY.min)) + 'px';
+                } else {
+                  btnY.style.display = 'none';
+                }
+              }
+
+              tableContainer.addEventListener('scroll', updateButtonPositions);
+              window.addEventListener('resize', updateButtonPositions);
+              
+              var observer = new MutationObserver(function(){ setTimeout(updateButtonPositions, 100); });
+              observer.observe(tableContainer, { childList: true, subtree: true });
+              setTimeout(updateButtonPositions, 500);
+
+              // Hover
+              if(btnX){
+                btnX.addEventListener('mouseenter', function(){ btnX.style.backgroundColor = 'rgba(0,200,83,0.95)'; });
+                btnX.addEventListener('mouseleave', function(){ btnX.style.backgroundColor = 'rgba(0,200,83,0.6)'; });
+              }
+              if(btnY){
+                btnY.addEventListener('mouseenter', function(){ btnY.style.backgroundColor = 'rgba(0,123,255,0.95)'; });
+                btnY.addEventListener('mouseleave', function(){ btnY.style.backgroundColor = 'rgba(0,123,255,0.6)'; });
+              }
+
+              // Drag X
+              var isDraggingX = false, startMouseX = 0, startLeft = 0;
+              if(btnX){
+                btnX.addEventListener('mousedown', function(e){
+                  isDraggingX = true;
+                  startMouseX = e.clientX;
+                  startLeft = parseFloat(btnX.style.left) || getBoundsX().min;
+                  btnX.style.cursor = 'grabbing';
+                  document.body.style.userSelect = 'none';
+                  e.preventDefault();
+                });
+              }
+
+              // Drag Y
+              var isDraggingY = false, startMouseY = 0, startTop = 0;
+              if(btnY){
+                btnY.addEventListener('mousedown', function(e){
+                  isDraggingY = true;
+                  startMouseY = e.clientY;
+                  startTop = parseFloat(btnY.style.top) || getBoundsY().min;
+                  btnY.style.cursor = 'grabbing';
+                  document.body.style.userSelect = 'none';
+                  e.preventDefault();
+                });
+              }
+
+              document.addEventListener('mousemove', function(e){
+                if(isDraggingX){
+                  var dx = e.clientX - startMouseX;
+                  var bX = getBoundsX();
+                  var newLeft = Math.max(bX.min, Math.min(bX.max, startLeft + dx));
+                  btnX.style.left = newLeft + 'px';
+                  var percentX = (newLeft - bX.min) / (bX.max - bX.min);
+                  var maxScrollX = tableContainer.scrollWidth - tableContainer.clientWidth;
+                  tableContainer.scrollLeft = percentX * maxScrollX;
+                }
+                if(isDraggingY){
+                  var dy = e.clientY - startMouseY;
+                  var bY = getBoundsY();
+                  var newTop = Math.max(bY.min, Math.min(bY.max, startTop + dy));
+                  btnY.style.top = newTop + 'px';
+                  var percentY = (newTop - bY.min) / (bY.max - bY.min);
+                  var maxScrollY = tableContainer.scrollHeight - tableContainer.clientHeight;
+                  tableContainer.scrollTop = percentY * maxScrollY;
+                }
+              });
+
+              document.addEventListener('mouseup', function(){
+                if(isDraggingX) { isDraggingX = false; btnX.style.cursor = 'grab'; document.body.style.userSelect = ''; }
+                if(isDraggingY) { isDraggingY = false; btnY.style.cursor = 'grab'; document.body.style.userSelect = ''; }
+              });
+
+            })();
